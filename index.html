@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top Chef Fantasy League</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream: #F5F0E8;
+      --ink: #1A1208;
+      --rust: #C4410C;
+      --gold: #D4A017;
+      --sage: #5C7A5C;
+      --paper: #EDE8DC;
+      --light-rust: #F2D5C4;
+      --border: #C8BFA8;
+    }
+
+    body {
+      background: var(--cream);
+      color: var(--ink);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--ink);
+      padding: 2.5rem 2rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 40px,
+        rgba(212,160,23,0.04) 40px,
+        rgba(212,160,23,0.04) 41px
+      );
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    .header-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.75rem;
+    }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      color: var(--cream);
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+    }
+    header h1 em {
+      color: var(--rust);
+      font-style: italic;
+    }
+    .header-meta {
+      margin-top: 1.25rem;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .header-meta span {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: rgba(245,240,232,0.5);
+      text-transform: uppercase;
+    }
+    .header-meta strong {
+      color: var(--gold);
+    }
+
+    /* MAIN LAYOUT */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem 4rem;
+    }
+
+    /* SECTION LABEL */
+    .section-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--rust);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* STANDINGS TABLE */
+    .standings-wrapper {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      margin-bottom: 3rem;
+      overflow-x: auto;
+    }
+    .standings-header {
+      padding: 1.25rem 1.5rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .standings-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .standings-header .ep-badge {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--sage);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(26,18,8,0.45);
+      padding: 0.75rem 1.5rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    thead th.right { text-align: right; }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(200,191,168,0.4);
+      transition: background 0.15s;
+      cursor: default;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(196,65,12,0.04); }
+
+    tbody tr.first-place {
+      background: linear-gradient(90deg, rgba(212,160,23,0.08) 0%, transparent 60%);
+    }
+
+    td {
+      padding: 1rem 1.5rem;
+      font-size: 0.82rem;
+    }
+    td.rank {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--border);
+      width: 3rem;
+      padding-right: 0;
+    }
+    tbody tr.first-place td.rank { color: var(--gold); }
+    tbody tr:nth-child(2) td.rank { color: rgba(26,18,8,0.3); }
+
+    td.player-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    td.chef-picks {
+      font-size: 0.72rem;
+      color: rgba(26,18,8,0.55);
+      font-style: italic;
+    }
+    td.total-pts {
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-align: right;
+    }
+    tbody tr.first-place td.total-pts { color: var(--rust); }
+
+    td.episode-pts {
+      text-align: right;
+      font-size: 0.75rem;
+      color: rgba(26,18,8,0.5);
+    }
+    td.trend {
+      text-align: right;
+      font-size: 0.8rem;
+    }
+    .trend-up { color: var(--sage); }
+    .trend-down { color: var(--rust); }
+    .trend-same { color: var(--border); }
+
+    /* EPISODE BREAKDOWN */
+    .episode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+    }
+    .episode-card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: fadeUp 0.4s forwards;
+    }
+    .episode-card:nth-child(1) { animation-delay: 0.05s; }
+    .episode-card:nth-child(2) { animation-delay: 0.1s; }
+    .episode-card:nth-child(3) { animation-delay: 0.15s; }
+    .episode-card:nth-child(4) { animation-delay: 0.2s; }
+    .episode-card:nth-child(5) { animation-delay: 0.25s; }
+    .episode-card:nth-child(6) { animation-delay: 0.3s; }
+    .episode-card:nth-child(7) { animation-delay: 0.35s; }
+    .episode-card:nth-child(8) { animation-delay: 0.4s; }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .episode-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ep-num {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--rust);
+    }
+    .ep-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .ep-winner {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      color: var(--sage);
+      text-transform: uppercase;
+    }
+
+    .ep-scores {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .ep-score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.76rem;
+    }
+    .ep-score-name { color: rgba(26,18,8,0.7); }
+    .ep-score-val {
+      font-weight: 500;
+      min-width: 2rem;
+      text-align: right;
+    }
+    .ep-score-bar-wrap {
+      flex: 1;
+      margin: 0 0.75rem;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .ep-score-bar {
+      height: 100%;
+      background: var(--rust);
+      border-radius: 2px;
+      transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* WEEKLY RANKINGS CHART */
+    .rankings-chart-wrap {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 3rem;
+      overflow-x: auto;
+    }
+    .rankings-chart-inner {
+      min-width: 500px;
+    }
+    #rankChart {
+      width: 100%;
+      height: 260px;
+    }
+
+    /* LEGEND */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* HOW TO UPDATE */
+    .how-to {
+      background: var(--ink);
+      color: var(--cream);
+      padding: 1.75rem 2rem;
+      border: 1px solid var(--border);
+    }
+    .how-to h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+      color: var(--gold);
+    }
+    .how-to p {
+      font-size: 0.75rem;
+      line-height: 1.7;
+      color: rgba(245,240,232,0.65);
+      margin-bottom: 0.5rem;
+    }
+    .how-to code {
+      background: rgba(255,255,255,0.08);
+      padding: 0.1em 0.4em;
+      border-radius: 2px;
+      color: var(--light-rust);
+      font-size: 0.72rem;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--border);
+      border-top: 1px solid var(--border);
+    }
+
+    /* Knife decorative element */
+    .knife-divider {
+      text-align: center;
+      font-size: 1.2rem;
+      color: var(--border);
+      margin: 0.5rem 0 2rem;
+      letter-spacing: 0.5em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-label">⚑ Season 22 · Fantasy League</div>
+    <h1>Top Chef<br /><em>Fantasy</em> League</h1>
+    <div class="header-meta">
+      <span>Episodes Aired: <strong id="eps-aired">—</strong></span>
+      <span>Players: <strong id="player-count">—</strong></span>
+      <span>Leader: <strong id="current-leader">—</strong></span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- STANDINGS -->
+  <div class="section-label">Standings</div>
+  <div class="standings-wrapper">
+    <div class="standings-header">
+      <h2>Season Leaderboard</h2>
+      <span class="ep-badge" id="ep-badge">Through Ep. —</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Player</th>
+          <th>Drafted Chefs</th>
+          <th class="right">Last Ep.</th>
+          <th class="right">Total Pts</th>
+          <th class="right">Trend</th>
+        </tr>
+      </thead>
+      <tbody id="standings-body"></tbody>
+    </table>
+  </div>
+
+  <!-- WEEKLY RANKING CHART -->
+  <div class="section-label">Weekly Rankings</div>
+  <div class="rankings-chart-wrap">
+    <div class="standings-header" style="padding:0 0 1rem; border:none;">
+      <h2>Ranking Over Time</h2>
+    </div>
+    <div class="rankings-chart-inner">
+      <canvas id="rankChart"></canvas>
+    </div>
+    <div class="legend" id="rank-legend"></div>
+  </div>
+
+  <!-- EPISODE BREAKDOWN -->
+  <div class="section-label">Episode Breakdown</div>
+  <div class="knife-divider">· · · · ·</div>
+  <div class="episode-grid" id="episode-grid"></div>
+
+  <!-- HOW TO UPDATE -->
+  <div class="how-to">
+    <h3>📋 How to Update Scores</h3>
+    <p>Edit <code>data.js</code> in your repository. Each episode is an object in the <code>episodes</code> array. Add a new episode object or update existing scores, then push to GitHub — the site updates automatically.</p>
+    <p>Player rosters (drafted chefs) live in the <code>players</code> array at the top of <code>data.js</code>. Edit names and drafted chefs there.</p>
+  </div>
+
+</main>
+
+<footer>Top Chef Fantasy League &nbsp;·&nbsp; Built for the love of the game</footer>
+
+<script src="data.js"></script>
+<script>
+  // ── Palette for players ──────────────────────────────────────────────────
+  const COLORS = ['#C4410C','#D4A017','#5C7A5C','#7B5EA7','#2A7A9B','#B85C8A','#3D7A6B','#C47A1C'];
+
+  // ── Compute standings from data ──────────────────────────────────────────
+  function computeStandings() {
+    const totals = {};
+    const lastEp = {};
+    LEAGUE.players.forEach(p => { totals[p.id] = 0; lastEp[p.id] = 0; });
+
+    LEAGUE.episodes.forEach((ep, i) => {
+      ep.scores.forEach(s => {
+        totals[s.playerId] = (totals[s.playerId] || 0) + s.points;
+        if (i === LEAGUE.episodes.length - 1) lastEp[s.playerId] = s.points;
+      });
+    });
+
+    return LEAGUE.players
+      .map(p => ({ ...p, total: totals[p.id] || 0, lastEp: lastEp[p.id] || 0 }))
+      .sort((a, b) => b.total - a.total);
+  }
+
+  // ── Compute rank per episode per player ──────────────────────────────────
+  function computeWeeklyRanks(standings) {
+    const ranks = {}; // playerId -> [rank per ep]
+    standings.forEach(p => ranks[p.id] = []);
+
+    LEAGUE.episodes.forEach(ep => {
+      const epTotals = {};
+      standings.forEach(p => epTotals[p.id] = 0);
+
+      // Accumulate up to this episode
+      LEAGUE.episodes.forEach(e2 => {
+        if (e2.number > ep.number) return;
+        e2.scores.forEach(s => { epTotals[s.playerId] = (epTotals[s.playerId] || 0) + s.points; });
+      });
+
+      const sorted = [...standings].sort((a, b) => epTotals[b.id] - epTotals[a.id]);
+      sorted.forEach((p, i) => ranks[p.id].push(i + 1));
+    });
+
+    return ranks;
+  }
+
+  // ── Trend arrow ──────────────────────────────────────────────────────────
+  function trend(ranks) {
+    if (ranks.length < 2) return '<span class="trend-same">—</span>';
+    const diff = ranks[ranks.length - 2] - ranks[ranks.length - 1];
+    if (diff > 0) return `<span class="trend-up">▲ ${diff}</span>`;
+    if (diff < 0) return `<span class="trend-down">▼ ${Math.abs(diff)}</span>`;
+    return '<span class="trend-same">—</span>';
+  }
+
+  // ── Render standings table ───────────────────────────────────────────────
+  function renderStandings(standings, weeklyRanks) {
+    const tbody = document.getElementById('standings-body');
+    tbody.innerHTML = standings.map((p, i) => {
+      const ranks = weeklyRanks[p.id] || [];
+      const isFirst = i === 0;
+      return `<tr class="${isFirst ? 'first-place' : ''}">
+        <td class="rank">${i + 1}</td>
+        <td class="player-name">${p.name}</td>
+        <td class="chef-picks">${(p.chefs || []).join(', ')}</td>
+        <td class="episode-pts">${p.lastEp > 0 ? '+' + p.lastEp : '—'}</td>
+        <td class="total-pts">${p.total}</td>
+        <td class="trend">${trend(ranks)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Render episode cards ─────────────────────────────────────────────────
+  function renderEpisodes(standings) {
+    const grid = document.getElementById('episode-grid');
+    const maxScore = Math.max(...LEAGUE.episodes.flatMap(e => e.scores.map(s => s.points)), 1);
+
+    grid.innerHTML = [...LEAGUE.episodes].reverse().map(ep => {
+      const sorted = [...ep.scores].sort((a, b) => b.points - a.points);
+      const rows = sorted.map(s => {
+        const player = standings.find(p => p.id === s.playerId);
+        const pct = Math.round((s.points / maxScore) * 100);
+        return `<div class="ep-score-row">
+          <span class="ep-score-name">${player ? player.name : s.playerId}</span>
+          <div class="ep-score-bar-wrap"><div class="ep-score-bar" style="width:${pct}%"></div></div>
+          <span class="ep-score-val">${s.points}</span>
+        </div>`;
+      }).join('');
+
+      return `<div class="episode-card">
+        <div class="episode-card-header">
+          <div>
+            <div class="ep-num">Episode ${ep.number}</div>
+            <div class="ep-title">${ep.title || 'Episode ' + ep.number}</div>
+          </div>
+          ${ep.chefWinner ? `<div class="ep-winner">🏆 ${ep.chefWinner}</div>` : ''}
+        </div>
+        <div class="ep-scores">${rows}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Render ranking chart (canvas) ────────────────────────────────────────
+  function renderRankChart(standings, weeklyRanks) {
+    const canvas = document.getElementById('rankChart');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth;
+    const H = 260;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    canvas.style.height = H + 'px';
+
+    const n = LEAGUE.episodes.length;
+    const numPlayers = standings.length;
+    if (n === 0) { ctx.fillStyle = 'rgba(26,18,8,0.2)'; ctx.font = '0.8rem DM Mono'; ctx.fillText('No episodes yet.', 20, 40); return; }
+
+    const PAD = { top: 20, right: 20, bottom: 30, left: 30 };
+    const chartW = W - PAD.left - PAD.right;
+    const chartH = H - PAD.top - PAD.bottom;
+
+    const xStep = n > 1 ? chartW / (n - 1) : chartW / 2;
+    const yStep = chartH / (numPlayers - 1 || 1);
+
+    // Grid lines
+    for (let r = 1; r <= numPlayers; r++) {
+      const y = PAD.top + (r - 1) * yStep;
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(200,191,168,0.35)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(PAD.left, y);
+      ctx.lineTo(PAD.left + chartW, y);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(26,18,8,0.3)';
+      ctx.font = `${9 * dpr / dpr}px DM Mono`;
+      ctx.fillText(r, PAD.left - 18, y + 4);
+    }
+
+    // Episode labels
+    LEAGUE.episodes.forEach((ep, i) => {
+      const x = PAD.left + i * xStep;
+      ctx.fillStyle = 'rgba(26,18,8,0.3)';
+      ctx.font = `${9}px DM Mono`;
+      ctx.textAlign = 'center';
+      ctx.fillText('Ep ' + ep.number, x, H - 8);
+    });
+
+    // Lines per player
+    standings.forEach((p, pi) => {
+      const ranks = weeklyRanks[p.id] || [];
+      if (ranks.length === 0) return;
+      const color = COLORS[pi % COLORS.length];
+
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      ranks.forEach((r, i) => {
+        const x = PAD.left + i * xStep;
+        const y = PAD.top + (r - 1) * yStep;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Dots
+      ranks.forEach((r, i) => {
+        const x = PAD.left + i * xStep;
+        const y = PAD.top + (r - 1) * yStep;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#F5F0E8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
+    });
+
+    // Legend
+    const legend = document.getElementById('rank-legend');
+    legend.innerHTML = standings.map((p, pi) => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${COLORS[pi % COLORS.length]}"></div>
+        ${p.name}
+      </div>`).join('');
+  }
+
+  // ── Bootstrap ────────────────────────────────────────────────────────────
+  function init() {
+    const standings = computeStandings();
+    const weeklyRanks = computeWeeklyRanks(standings);
+    const lastEp = LEAGUE.episodes.length;
+
+    document.getElementById('eps-aired').textContent = lastEp;
+    document.getElementById('player-count').textContent = LEAGUE.players.length;
+    document.getElementById('current-leader').textContent = standings[0]?.name || '—';
+    document.getElementById('ep-badge').textContent = `Through Ep. ${lastEp}`;
+
+    renderStandings(standings, weeklyRanks);
+    renderEpisodes(standings);
+    setTimeout(() => renderRankChart(standings, weeklyRanks), 50);
+  }
+
+  init();
+</script>
+</body>
+</html>
