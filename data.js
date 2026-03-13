@@ -34,7 +34,7 @@ const LEAGUE = {
     },
     {
       id: "amie",
-      name: "amie",
+      name: "Amie",
       chefs: ["Chef Brady", "Chef Shane", "Chef Victoire"]
     },
     {
