@@ -13,33 +13,33 @@ const LEAGUE = {
   // ----------------------------------------------------------
   players: [
     {
-      id: "alice",
-      name: "Alice",
+      id: "ben",
+      name: "Ben",
       chefs: ["Chef Kelsey", "Chef Savannah", "Chef Danny"]
     },
     {
-      id: "marcus",
-      name: "Marcus",
+      id: "helen",
+      name: "Helen",
       chefs: ["Chef Tristen", "Chef Megan", "Chef Laura"]
     },
     {
-      id: "priya",
-      name: "Priya",
+      id: "sydney",
+      name: "Sydney",
       chefs: ["Chef Tom", "Chef Michelle", "Chef Raf"]
     },
     {
-      id: "jordan",
-      name: "Jordan",
+      id: "jasmine",
+      name: "Jasmine",
       chefs: ["Chef Kévin", "Chef Charly", "Chef Danyele"]
     },
     {
-      id: "sam",
-      name: "Sam",
+      id: "amie",
+      name: "amie",
       chefs: ["Chef Brady", "Chef Shane", "Chef Victoire"]
     },
     {
-      id: "taylor",
-      name: "Taylor",
+      id: "courtney",
+      name: "Courtney",
       chefs: ["Chef Amanda", "Chef Nasrin", "Chef Kealoha"]
     }
   ],
@@ -68,12 +68,12 @@ const LEAGUE = {
       title: "First Impressions",
       chefWinner: "Chef Kelsey",
       scores: [
-        { playerId: "alice",   points: 18 },
-        { playerId: "marcus",  points: 12 },
-        { playerId: "priya",   points: 9  },
-        { playerId: "jordan",  points: 15 },
-        { playerId: "sam",     points: 7  },
-        { playerId: "taylor",  points: 11 }
+        { playerId: "ben",   points: 18 },
+        { playerId: "helen",  points: 12 },
+        { playerId: "sydney",   points: 9  },
+        { playerId: "jasmine",  points: 15 },
+        { playerId: "amie",     points: 7  },
+        { playerId: "courtney",  points: 11 }
       ]
     },
     {
@@ -81,12 +81,12 @@ const LEAGUE = {
       title: "Farm to Table",
       chefWinner: "Chef Tristen",
       scores: [
-        { playerId: "alice",   points: 10 },
-        { playerId: "marcus",  points: 20 },
-        { playerId: "priya",   points: 14 },
-        { playerId: "jordan",  points: 8  },
-        { playerId: "sam",     points: 13 },
-        { playerId: "taylor",  points: 6  }
+        { playerId: "ben",   points: 10 },
+        { playerId: "helen",  points: 20 },
+        { playerId: "sydney",   points: 14 },
+        { playerId: "jasmine",  points: 8  },
+        { playerId: "amie",     points: 13 },
+        { playerId: "courtney",  points: 6  }
       ]
     },
     {
@@ -94,12 +94,12 @@ const LEAGUE = {
       title: "Fire & Spice",
       chefWinner: "Chef Kévin",
       scores: [
-        { playerId: "alice",   points: 7  },
-        { playerId: "marcus",  points: 11 },
-        { playerId: "priya",   points: 16 },
-        { playerId: "jordan",  points: 22 },
-        { playerId: "sam",     points: 9  },
-        { playerId: "taylor",  points: 14 }
+        { playerId: "ben",   points: 7  },
+        { playerId: "helen",  points: 11 },
+        { playerId: "sydney",   points: 16 },
+        { playerId: "jasmine",  points: 22 },
+        { playerId: "amie",     points: 9  },
+        { playerId: "courtney",  points: 14 }
       ]
     },
     {
@@ -107,12 +107,12 @@ const LEAGUE = {
       title: "Restaurant Wars",
       chefWinner: "Chef Michelle",
       scores: [
-        { playerId: "alice",   points: 14 },
-        { playerId: "marcus",  points: 8  },
-        { playerId: "priya",   points: 21 },
-        { playerId: "jordan",  points: 12 },
-        { playerId: "sam",     points: 17 },
-        { playerId: "taylor",  points: 10 }
+        { playerId: "ben",   points: 14 },
+        { playerId: "helen",  points: 8  },
+        { playerId: "sydney",   points: 21 },
+        { playerId: "jasmine",  points: 12 },
+        { playerId: "amie",     points: 17 },
+        { playerId: "courtney",  points: 10 }
       ]
     }
   ]
@@ -128,12 +128,12 @@ const LEAGUE = {
 //    title: "Episode Title Here",
 //    chefWinner: "Chef Name",
 //    scores: [
-//      { playerId: "alice",   points: 0 },
-//      { playerId: "marcus",  points: 0 },
-//      { playerId: "priya",   points: 0 },
-//      { playerId: "jordan",  points: 0 },
-//      { playerId: "sam",     points: 0 },
-//      { playerId: "taylor",  points: 0 }
+//      { playerId: "ben",   points: 0 },
+//      { playerId: "helen",  points: 0 },
+//      { playerId: "sydney",   points: 0 },
+//      { playerId: "jasmine",  points: 0 },
+//      { playerId: "amie",     points: 0 },
+//      { playerId: "courtney",  points: 0 }
 //    ]
 //  },
 //
