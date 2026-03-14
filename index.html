@@ -823,11 +823,12 @@
     const LEAGUE      = buildLeague(playerCSV, chefScoreCSV);
     const standings   = computeStandings(LEAGUE);
     const weeklyRanks = computeWeeklyRanks(LEAGUE, standings);
+    const latestEpNum = LEAGUE.episodes.at(-1)?.number ?? 0;
 
-    document.getElementById('eps-aired').textContent      = LEAGUE.episodes.length;
+    document.getElementById('eps-aired').textContent      = latestEpNum;
     document.getElementById('player-count').textContent   = LEAGUE.players.length;
     document.getElementById('current-leader').textContent = standings[0]?.name || '—';
-    document.getElementById('ep-badge').textContent       = `Through Ep. ${LEAGUE.episodes.length}`;
+    document.getElementById('ep-badge').textContent       = `Through Ep. ${latestEpNum}`;
 
     renderStandings(standings, weeklyRanks);
     renderEpisodes(LEAGUE, standings);
