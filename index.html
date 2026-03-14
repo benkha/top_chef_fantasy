@@ -289,7 +289,7 @@
       align-items: center;
       font-size: 0.76rem;
     }
-    .ep-score-name { color: rgba(26,18,8,0.7); }
+    .ep-score-name { color: rgba(26,18,8,0.7); display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; }
     .ep-score-val {
       font-weight: 500;
       min-width: 2rem;
@@ -533,12 +533,14 @@
   // ── Build LEAGUE from players.csv + chef_scores.csv ──────────────────────
   // chef_scores.csv columns: episode, episodeTitle, [Chef Name], [Chef Name], ...
   // Player points per episode = sum of points for all chefs on their roster
-  function buildLeague(playerCSV, chefScoreCSV) {
+  function buildLeague(playerCSV, chefScoreCSV, bonusCSV) {
     // Players
     const players = playerCSV.rows.map(r => ({
       id: r.playerId,
       name: r.name,
-      chefs: r.chefs ? r.chefs.split('|').map(c => c.trim()) : []
+      chefs: r.chefs ? r.chefs.split('|').map(c => c.trim()) : [],
+      bonus: bonusCSV.rows.filter(b => b.playerId === r.playerId)
+                           .reduce((sum, b) => sum + (parseFloat(b.points) || 0), 0)
     }));
 
     // Chef columns (everything after episode + episodeTitle)
@@ -566,6 +568,15 @@
 
       return { number: epNum, title, chefWinner: topChef, chefPts, scores };
     }).sort((a, b) => a.number - b.number);
+
+    // Add each player's bonus points to the last episode's score
+    if (episodes.length > 0) {
+      const lastEp = episodes[episodes.length - 1];
+      lastEp.scores = lastEp.scores.map(s => {
+        const player = players.find(p => p.id === s.playerId);
+        return { ...s, points: s.points + (player?.bonus || 0) };
+      });
+    }
 
     return { players, episodes, chefCols };
   }
@@ -636,14 +647,20 @@
     const grid = document.getElementById('episode-grid');
     const maxScore = Math.max(...LEAGUE.episodes.flatMap(e => e.scores.map(s => s.points)), 1);
 
+    
+    const lastEpNum = LEAGUE.episodes.at(-1)?.number;
     grid.innerHTML = [...LEAGUE.episodes].reverse().map(ep => {
+      const isLastEp = ep.number === lastEpNum;
       const sorted = [...ep.scores].sort((a, b) => b.points - a.points);
 
       const playerRows = sorted.map(s => {
         const player = standings.find(p => p.id === s.playerId);
         const pct = Math.round((s.points / maxScore) * 100);
+        const bonusBadge = (isLastEp && player?.bonus)
+          ? `<span style="font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-left:0.4rem;">+${player.bonus} bonus</span>`
+          : '';
         return `<div class="ep-score-row">
-          <span class="ep-score-name">${player ? player.name : s.playerId}</span>
+          <span class="ep-score-name">${player ? player.name : s.playerId}${bonusBadge}</span>
           <div class="ep-score-bar-wrap"><div class="ep-score-bar" style="width:${pct}%"></div></div>
           <span class="ep-score-val">${s.points}</span>
         </div>`;
@@ -840,13 +857,14 @@
 
   // ── Bootstrap ────────────────────────────────────────────────────────────
   async function init() {
-    let playerCSV, chefScoreCSV;
+    let playerCSV, chefScoreCSV, bonusCSV;
     try {
-      const [pRes, cRes] = await Promise.all([fetch('players.csv'), fetch('chef_scores.csv')]);
+      const [pRes, cRes, bRes] = await Promise.all([fetch('players.csv'), fetch('chef_scores.csv'), fetch('bonuses.csv')]);
       if (!pRes.ok) throw new Error('Could not load players.csv');
       if (!cRes.ok) throw new Error('Could not load chef_scores.csv');
       playerCSV     = parseCSV(await pRes.text());
       chefScoreCSV  = parseCSV(await cRes.text());
+      bonusCSV      = bRes.ok ? parseCSV(await bRes.text()) : { rows: [] };
     } catch (err) {
       document.querySelector('main').insertAdjacentHTML('afterbegin',
         `<div style="background:#C4410C;color:#fff;padding:1rem 1.5rem;margin-bottom:2rem;font-size:0.8rem;">
@@ -854,8 +872,7 @@
         </div>`);
       return;
     }
-
-    const LEAGUE      = buildLeague(playerCSV, chefScoreCSV);
+    const LEAGUE      = buildLeague(playerCSV, chefScoreCSV, bonusCSV);
     const standings   = computeStandings(LEAGUE);
     const weeklyRanks = computeWeeklyRanks(LEAGUE, standings);
     const latestEpNum = LEAGUE.episodes.at(-1)?.number ?? 0;
