@@ -212,6 +212,17 @@
     .trend-down { color: var(--rust); }
     .trend-same { color: var(--border); }
 
+    /* CUMULATIVE POINTS CHART */
+    .cumulative-chart-wrap {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 3rem;
+      overflow-x: auto;
+    }
+    .cumulative-chart-inner { min-width: 500px; }
+    #cumulativeChart { width: 100%; height: 280px; }
+
     /* EPISODE BREAKDOWN */
     .episode-grid {
       display: grid;
@@ -387,7 +398,7 @@
 
 <header>
   <div class="header-inner">
-    <div class="header-label">⚑ Season 22 · Fantasy League</div>
+    <div class="header-label">⚑ Season 23 · Fantasy League</div>
     <h1>Top Chef<br /><em>Fantasy</em> League</h1>
     <div class="header-meta">
       <span>Episodes Aired: <strong id="eps-aired">—</strong></span>
@@ -433,31 +444,100 @@
     <div class="legend" id="rank-legend"></div>
   </div>
 
+  <!-- CUMULATIVE POINTS CHART -->
+  <div class="section-label">Cumulative Points</div>
+  <div class="cumulative-chart-wrap">
+    <div class="standings-header" style="padding:0 0 1rem; border:none;">
+      <h2>Total Points Over Time</h2>
+    </div>
+    <div class="cumulative-chart-inner">
+      <canvas id="cumulativeChart"></canvas>
+    </div>
+    <div class="legend" id="cumulative-legend"></div>
+  </div>
+
   <!-- EPISODE BREAKDOWN -->
   <div class="section-label">Episode Breakdown</div>
   <div class="knife-divider">· · · · ·</div>
   <div class="episode-grid" id="episode-grid"></div>
-
-  <!-- HOW TO UPDATE -->
-  <div class="how-to">
-    <h3>📋 How to Update Scores</h3>
-    <p>Edit <code>data.js</code> in your repository. Each episode is an object in the <code>episodes</code> array. Add a new episode object or update existing scores, then push to GitHub — the site updates automatically.</p>
-    <p>Player rosters (drafted chefs) live in the <code>players</code> array at the top of <code>data.js</code>. Edit names and drafted chefs there.</p>
-  </div>
-
 </main>
 
-<footer>Top Chef Fantasy League &nbsp;·&nbsp; Built for the love of the game</footer>
+<footer>Top Chef Fantasy League &nbsp;·&nbsp; Pack Your Knives and Go</footer>
 
-<script src="data.js"></script>
 <script>
-  // ── Palette for players ──────────────────────────────────────────────────
   const COLORS = ['#C4410C','#D4A017','#5C7A5C','#7B5EA7','#2A7A9B','#B85C8A','#3D7A6B','#C47A1C'];
 
-  // ── Compute standings from data ──────────────────────────────────────────
-  function computeStandings() {
-    const totals = {};
-    const lastEp = {};
+  // ── CSV parser ───────────────────────────────────────────────────────────
+  function splitCSVLine(line) {
+    const result = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuote = !inQuote; }
+      else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function parseCSV(text) {
+    const lines = text.trim().split('\n').map(l => l.trimEnd());
+    const headers = splitCSVLine(lines[0]).map(h => h.trim());
+    return {
+      headers,
+      rows: lines.slice(1).filter(l => l.trim()).map(line => {
+        const vals = splitCSVLine(line);
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = (vals[i] || '').trim());
+        return obj;
+      })
+    };
+  }
+
+  // ── Build LEAGUE from players.csv + chef_scores.csv ──────────────────────
+  // chef_scores.csv columns: episode, episodeTitle, [Chef Name], [Chef Name], ...
+  // Player points per episode = sum of points for all chefs on their roster
+  function buildLeague(playerCSV, chefScoreCSV) {
+    // Players
+    const players = playerCSV.rows.map(r => ({
+      id: r.playerId,
+      name: r.name,
+      chefs: r.chefs ? r.chefs.split('|').map(c => c.trim()) : []
+    }));
+
+    // Chef columns (everything after episode + episodeTitle)
+    const META_COLS = ['episode', 'episodeTitle'];
+    const chefCols = chefScoreCSV.headers.filter(h => !META_COLS.includes(h));
+
+    // Build episodes; for each episode compute per-player points
+    const episodes = chefScoreCSV.rows.map(row => {
+      const epNum = parseInt(row.episode, 10);
+      const title = row.episodeTitle || ('Episode ' + epNum);
+
+      // Chef points this episode
+      const chefPts = {};
+      chefCols.forEach(chef => { chefPts[chef] = parseFloat(row[chef]) || 0; });
+
+      // Top chef winner = chef with highest points this episode
+      const topChef = chefCols.reduce((best, chef) =>
+        chefPts[chef] > (chefPts[best] || 0) ? chef : best, chefCols[0]);
+
+      // Sum each player's roster
+      const scores = players.map(p => ({
+        playerId: p.id,
+        points: p.chefs.reduce((sum, chef) => sum + (chefPts[chef] || 0), 0)
+      }));
+
+      return { number: epNum, title, chefWinner: topChef, chefPts, scores };
+    }).sort((a, b) => a.number - b.number);
+
+    return { players, episodes, chefCols };
+  }
+
+  // ── Compute standings ────────────────────────────────────────────────────
+  function computeStandings(LEAGUE) {
+    const totals = {}, lastEp = {};
     LEAGUE.players.forEach(p => { totals[p.id] = 0; lastEp[p.id] = 0; });
 
     LEAGUE.episodes.forEach((ep, i) => {
@@ -472,21 +552,18 @@
       .sort((a, b) => b.total - a.total);
   }
 
-  // ── Compute rank per episode per player ──────────────────────────────────
-  function computeWeeklyRanks(standings) {
-    const ranks = {}; // playerId -> [rank per ep]
+  // ── Compute weekly ranks ─────────────────────────────────────────────────
+  function computeWeeklyRanks(LEAGUE, standings) {
+    const ranks = {};
     standings.forEach(p => ranks[p.id] = []);
 
     LEAGUE.episodes.forEach(ep => {
       const epTotals = {};
       standings.forEach(p => epTotals[p.id] = 0);
-
-      // Accumulate up to this episode
       LEAGUE.episodes.forEach(e2 => {
         if (e2.number > ep.number) return;
         e2.scores.forEach(s => { epTotals[s.playerId] = (epTotals[s.playerId] || 0) + s.points; });
       });
-
       const sorted = [...standings].sort((a, b) => epTotals[b.id] - epTotals[a.id]);
       sorted.forEach((p, i) => ranks[p.id].push(i + 1));
     });
@@ -503,13 +580,11 @@
     return '<span class="trend-same">—</span>';
   }
 
-  // ── Render standings table ───────────────────────────────────────────────
+  // ── Render standings ─────────────────────────────────────────────────────
   function renderStandings(standings, weeklyRanks) {
-    const tbody = document.getElementById('standings-body');
-    tbody.innerHTML = standings.map((p, i) => {
+    document.getElementById('standings-body').innerHTML = standings.map((p, i) => {
       const ranks = weeklyRanks[p.id] || [];
-      const isFirst = i === 0;
-      return `<tr class="${isFirst ? 'first-place' : ''}">
+      return `<tr class="${i === 0 ? 'first-place' : ''}">
         <td class="rank">${i + 1}</td>
         <td class="player-name">${p.name}</td>
         <td class="chef-picks">${(p.chefs || []).join(', ')}</td>
@@ -521,13 +596,15 @@
   }
 
   // ── Render episode cards ─────────────────────────────────────────────────
-  function renderEpisodes(standings) {
+  // Cards show per-player points AND a chef breakdown toggle
+  function renderEpisodes(LEAGUE, standings) {
     const grid = document.getElementById('episode-grid');
     const maxScore = Math.max(...LEAGUE.episodes.flatMap(e => e.scores.map(s => s.points)), 1);
 
     grid.innerHTML = [...LEAGUE.episodes].reverse().map(ep => {
       const sorted = [...ep.scores].sort((a, b) => b.points - a.points);
-      const rows = sorted.map(s => {
+
+      const playerRows = sorted.map(s => {
         const player = standings.find(p => p.id === s.playerId);
         const pct = Math.round((s.points / maxScore) * 100);
         return `<div class="ep-score-row">
@@ -537,21 +614,49 @@
         </div>`;
       }).join('');
 
-      return `<div class="episode-card">
+      // Chef breakdown (sorted by points desc)
+      const maxChefPts = Math.max(...Object.values(ep.chefPts), 1);
+      const chefRows = Object.entries(ep.chefPts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([chef, pts]) => {
+          const pct = Math.round((pts / maxChefPts) * 100);
+          return `<div class="ep-score-row" style="opacity:0.75">
+            <span class="ep-score-name" style="font-style:italic">${chef}</span>
+            <div class="ep-score-bar-wrap"><div class="ep-score-bar" style="width:${pct}%;background:var(--gold)"></div></div>
+            <span class="ep-score-val">${pts}</span>
+          </div>`;
+        }).join('');
+
+      const cardId = `ep-card-${ep.number}`;
+      return `<div class="episode-card" id="${cardId}">
         <div class="episode-card-header">
           <div>
             <div class="ep-num">Episode ${ep.number}</div>
-            <div class="ep-title">${ep.title || 'Episode ' + ep.number}</div>
+            <div class="ep-title">${ep.title}</div>
           </div>
           ${ep.chefWinner ? `<div class="ep-winner">🏆 ${ep.chefWinner}</div>` : ''}
         </div>
-        <div class="ep-scores">${rows}</div>
+        <div class="ep-scores">${playerRows}</div>
+        <div style="margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.75rem;">
+          <button onclick="toggleChefs('${cardId}')" style="background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--rust);padding:0;">
+            ▸ Chef Scores
+          </button>
+          <div id="${cardId}-chefs" style="display:none;margin-top:0.6rem;">${chefRows}</div>
+        </div>
       </div>`;
     }).join('');
   }
 
-  // ── Render ranking chart (canvas) ────────────────────────────────────────
-  function renderRankChart(standings, weeklyRanks) {
+  function toggleChefs(cardId) {
+    const el = document.getElementById(cardId + '-chefs');
+    const btn = el.previousElementSibling;
+    const hidden = el.style.display === 'none';
+    el.style.display = hidden ? 'block' : 'none';
+    btn.textContent = (hidden ? '▾' : '▸') + ' Chef Scores';
+  }
+
+  // ── Render ranking chart ─────────────────────────────────────────────────
+  function renderRankChart(LEAGUE, standings, weeklyRanks) {
     const canvas = document.getElementById('rankChart');
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
@@ -564,74 +669,134 @@
 
     const n = LEAGUE.episodes.length;
     const numPlayers = standings.length;
-    if (n === 0) { ctx.fillStyle = 'rgba(26,18,8,0.2)'; ctx.font = '0.8rem DM Mono'; ctx.fillText('No episodes yet.', 20, 40); return; }
+    if (n === 0) { ctx.fillStyle = 'rgba(26,18,8,0.2)'; ctx.font = '9px DM Mono'; ctx.fillText('No episodes yet.', 20, 40); return; }
 
     const PAD = { top: 20, right: 20, bottom: 30, left: 30 };
     const chartW = W - PAD.left - PAD.right;
     const chartH = H - PAD.top - PAD.bottom;
-
     const xStep = n > 1 ? chartW / (n - 1) : chartW / 2;
     const yStep = chartH / (numPlayers - 1 || 1);
 
-    // Grid lines
     for (let r = 1; r <= numPlayers; r++) {
       const y = PAD.top + (r - 1) * yStep;
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(200,191,168,0.35)';
-      ctx.lineWidth = 1;
-      ctx.moveTo(PAD.left, y);
-      ctx.lineTo(PAD.left + chartW, y);
+      ctx.beginPath(); ctx.strokeStyle = 'rgba(200,191,168,0.35)'; ctx.lineWidth = 1;
+      ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + chartW, y); ctx.stroke();
+      ctx.fillStyle = 'rgba(26,18,8,0.3)'; ctx.font = '9px DM Mono'; ctx.textAlign = 'right';
+      ctx.fillText(r, PAD.left - 6, y + 4);
+    }
+
+    LEAGUE.episodes.forEach((ep, i) => {
+      ctx.fillStyle = 'rgba(26,18,8,0.3)'; ctx.font = '9px DM Mono'; ctx.textAlign = 'center';
+      ctx.fillText('Ep ' + ep.number, PAD.left + i * xStep, H - 8);
+    });
+
+    standings.forEach((p, pi) => {
+      const ranks = weeklyRanks[p.id] || [];
+      if (!ranks.length) return;
+      const color = COLORS[pi % COLORS.length];
+      ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ranks.forEach((r, i) => {
+        const x = PAD.left + i * xStep, y = PAD.top + (r - 1) * yStep;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
       ctx.stroke();
-      ctx.fillStyle = 'rgba(26,18,8,0.3)';
-      ctx.font = `${9 * dpr / dpr}px DM Mono`;
-      ctx.fillText(r, PAD.left - 18, y + 4);
+      ranks.forEach((r, i) => {
+        const x = PAD.left + i * xStep, y = PAD.top + (r - 1) * yStep;
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.fill();
+        ctx.strokeStyle = '#F5F0E8'; ctx.lineWidth = 1.5; ctx.stroke();
+      });
+    });
+
+    document.getElementById('rank-legend').innerHTML = standings.map((p, pi) => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${COLORS[pi % COLORS.length]}"></div>
+        ${p.name}
+      </div>`).join('');
+  }
+
+  // ── Render cumulative points chart ───────────────────────────────────────
+  function renderCumulativeChart(LEAGUE, standings) {
+    const canvas = document.getElementById('cumulativeChart');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth;
+    const H = 280;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    canvas.style.height = H + 'px';
+
+    const n = LEAGUE.episodes.length;
+    if (n === 0) { ctx.fillStyle = 'rgba(26,18,8,0.2)'; ctx.font = '9px DM Mono'; ctx.fillText('No episodes yet.', 20, 40); return; }
+
+    // Build cumulative totals per player per episode
+    const cumulative = {}; // playerId -> [running total after each ep]
+    standings.forEach(p => { cumulative[p.id] = []; });
+    LEAGUE.episodes.forEach(ep => {
+      standings.forEach(p => {
+        const prev = cumulative[p.id].at(-1) ?? 0;
+        const epScore = ep.scores.find(s => s.playerId === p.id)?.points ?? 0;
+        cumulative[p.id].push(prev + epScore);
+      });
+    });
+
+    const maxVal = Math.max(...Object.values(cumulative).flat(), 1);
+
+    const PAD = { top: 20, right: 20, bottom: 30, left: 42 };
+    const chartW = W - PAD.left - PAD.right;
+    const chartH = H - PAD.top - PAD.bottom;
+    const xStep = n > 1 ? chartW / (n - 1) : chartW / 2;
+
+    // Horizontal grid lines (5 steps)
+    const gridSteps = 5;
+    for (let i = 0; i <= gridSteps; i++) {
+      const val = Math.round((maxVal / gridSteps) * i);
+      const y = PAD.top + chartH - (val / maxVal) * chartH;
+      ctx.beginPath(); ctx.strokeStyle = 'rgba(200,191,168,0.35)'; ctx.lineWidth = 1;
+      ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + chartW, y); ctx.stroke();
+      ctx.fillStyle = 'rgba(26,18,8,0.3)'; ctx.font = '9px DM Mono'; ctx.textAlign = 'right';
+      ctx.fillText(val, PAD.left - 6, y + 3);
     }
 
     // Episode labels
     LEAGUE.episodes.forEach((ep, i) => {
-      const x = PAD.left + i * xStep;
-      ctx.fillStyle = 'rgba(26,18,8,0.3)';
-      ctx.font = `${9}px DM Mono`;
-      ctx.textAlign = 'center';
-      ctx.fillText('Ep ' + ep.number, x, H - 8);
+      ctx.fillStyle = 'rgba(26,18,8,0.3)'; ctx.font = '9px DM Mono'; ctx.textAlign = 'center';
+      ctx.fillText('Ep ' + ep.number, PAD.left + i * xStep, H - 8);
     });
 
     // Lines per player
     standings.forEach((p, pi) => {
-      const ranks = weeklyRanks[p.id] || [];
-      if (ranks.length === 0) return;
+      const vals = cumulative[p.id];
+      if (!vals.length) return;
       const color = COLORS[pi % COLORS.length];
 
-      ctx.beginPath();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2.5;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-
-      ranks.forEach((r, i) => {
+      ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      vals.forEach((v, i) => {
         const x = PAD.left + i * xStep;
-        const y = PAD.top + (r - 1) * yStep;
+        const y = PAD.top + chartH - (v / maxVal) * chartH;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       });
       ctx.stroke();
 
-      // Dots
-      ranks.forEach((r, i) => {
+      // Dots + value labels
+      vals.forEach((v, i) => {
         const x = PAD.left + i * xStep;
-        const y = PAD.top + (r - 1) * yStep;
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.strokeStyle = '#F5F0E8';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        const y = PAD.top + chartH - (v / maxVal) * chartH;
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.fill();
+        ctx.strokeStyle = '#F5F0E8'; ctx.lineWidth = 1.5; ctx.stroke();
+        // Label on last point
+        if (i === vals.length - 1) {
+          ctx.fillStyle = color; ctx.font = 'bold 9px DM Mono'; ctx.textAlign = 'left';
+          ctx.fillText(v, x + 7, y + 3);
+        }
       });
     });
 
-    // Legend
-    const legend = document.getElementById('rank-legend');
-    legend.innerHTML = standings.map((p, pi) => `
+    document.getElementById('cumulative-legend').innerHTML = standings.map((p, pi) => `
       <div class="legend-item">
         <div class="legend-dot" style="background:${COLORS[pi % COLORS.length]}"></div>
         ${p.name}
@@ -639,19 +804,37 @@
   }
 
   // ── Bootstrap ────────────────────────────────────────────────────────────
-  function init() {
-    const standings = computeStandings();
-    const weeklyRanks = computeWeeklyRanks(standings);
-    const lastEp = LEAGUE.episodes.length;
+  async function init() {
+    let playerCSV, chefScoreCSV;
+    try {
+      const [pRes, cRes] = await Promise.all([fetch('players.csv'), fetch('chef_scores.csv')]);
+      if (!pRes.ok) throw new Error('Could not load players.csv');
+      if (!cRes.ok) throw new Error('Could not load chef_scores.csv');
+      playerCSV     = parseCSV(await pRes.text());
+      chefScoreCSV  = parseCSV(await cRes.text());
+    } catch (err) {
+      document.querySelector('main').insertAdjacentHTML('afterbegin',
+        `<div style="background:#C4410C;color:#fff;padding:1rem 1.5rem;margin-bottom:2rem;font-size:0.8rem;">
+          ⚠ ${err.message} — make sure players.csv and chef_scores.csv are in the same folder as index.html.
+        </div>`);
+      return;
+    }
 
-    document.getElementById('eps-aired').textContent = lastEp;
-    document.getElementById('player-count').textContent = LEAGUE.players.length;
+    const LEAGUE      = buildLeague(playerCSV, chefScoreCSV);
+    const standings   = computeStandings(LEAGUE);
+    const weeklyRanks = computeWeeklyRanks(LEAGUE, standings);
+
+    document.getElementById('eps-aired').textContent      = LEAGUE.episodes.length;
+    document.getElementById('player-count').textContent   = LEAGUE.players.length;
     document.getElementById('current-leader').textContent = standings[0]?.name || '—';
-    document.getElementById('ep-badge').textContent = `Through Ep. ${lastEp}`;
+    document.getElementById('ep-badge').textContent       = `Through Ep. ${LEAGUE.episodes.length}`;
 
     renderStandings(standings, weeklyRanks);
-    renderEpisodes(standings);
-    setTimeout(() => renderRankChart(standings, weeklyRanks), 50);
+    renderEpisodes(LEAGUE, standings);
+    setTimeout(() => {
+      renderRankChart(LEAGUE, standings, weeklyRanks);
+      renderCumulativeChart(LEAGUE, standings);
+    }, 50);
   }
 
   init();
