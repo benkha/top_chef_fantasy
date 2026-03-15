@@ -833,7 +833,7 @@
     standings.forEach((p, pi) => {
       const vals = cumulative[p.id];
       if (!vals.length) return;
-      const color = COLORS[pi % COLORS.length];
+      const color = playerColor(p);
 
       ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2.5;
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
