@@ -501,7 +501,18 @@
 
 <script>
   const COLORS = ['#C4410C','#D4A017','#5C7A5C','#7B5EA7','#2A7A9B','#B85C8A','#3D7A6B','#C47A1C'];
-
+    const PLAYER_COLORS = {
+    ben:      '#C4410C',
+    jasmine:  '#D4A017',
+    sydney:   '#5C7A5C',
+    helen:    '#F4A7C3',
+    amie:     '#2A7A9B',
+    courtney: '#7B5EA7',
+  };
+  const DEFAULT_COLORS = ['#3D7A6B','#C47A1C','#B85C8A'];
+  function playerColor(p) {
+    return PLAYER_COLORS[p.id] || DEFAULT_COLORS[Object.keys(PLAYER_COLORS).length % DEFAULT_COLORS.length];
+  }
   // ── CSV parser ───────────────────────────────────────────────────────────
   function splitCSVLine(line) {
     const result = [];
@@ -745,7 +756,7 @@
     standings.forEach((p, pi) => {
       const ranks = weeklyRanks[p.id] || [];
       if (!ranks.length) return;
-      const color = COLORS[pi % COLORS.length];
+      const color = playerColor(p);
       ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2.5;
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       ranks.forEach((r, i) => {
@@ -763,7 +774,7 @@
 
     document.getElementById('rank-legend').innerHTML = standings.map((p, pi) => `
       <div class="legend-item">
-        <div class="legend-dot" style="background:${COLORS[pi % COLORS.length]}"></div>
+        <div class="legend-dot" style="background:${playerColor(p)}"></div>
         ${p.name}
       </div>`).join('');
   }
@@ -850,7 +861,7 @@
 
     document.getElementById('cumulative-legend').innerHTML = standings.map((p, pi) => `
       <div class="legend-item">
-        <div class="legend-dot" style="background:${COLORS[pi % COLORS.length]}"></div>
+        <div class="legend-dot" style="background:${playerColor(p)}"></div>
         ${p.name}
       </div>`).join('');
   }
