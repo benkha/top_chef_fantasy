@@ -645,7 +645,7 @@
         <td class="rank">${i + 1}</td>
         <td class="player-name">${p.name}</td>
         <td class="chef-picks">${(p.chefs || []).join(', ')}</td>
-        <td class="episode-pts">${p.lastEp > 0 ? '+' + p.lastEp : '—'}</td>
+        <td class="episode-pts">${p.lastEp !== 0 ? (p.lastEp > 0 ? '+' : '') + p.lastEp : '—'}</td>
         <td class="total-pts">${p.total}</td>
         <td class="trend">${trend(ranks)}</td>
       </tr>`;
