@@ -805,7 +805,10 @@
       });
     });
 
-    const maxVal = Math.max(...Object.values(cumulative).flat(), 1);
+    const allVals = Object.values(cumulative).flat();
+    const maxVal = Math.max(...allVals, 1);
+    const minVal = Math.min(...allVals, 0);
+    const valRange = maxVal - minVal || 1;
 
     const PAD = { top: 20, right: 20, bottom: 30, left: 42 };
     const chartW = W - PAD.left - PAD.right;
@@ -816,7 +819,7 @@
     const gridSteps = 5;
     for (let i = 0; i <= gridSteps; i++) {
       const val = Math.round((maxVal / gridSteps) * i);
-      const y = PAD.top + chartH - (val / maxVal) * chartH;
+      const y = PAD.top + chartH - ((val - minVal) / valRange) * chartH;
       ctx.beginPath(); ctx.strokeStyle = 'rgba(200,191,168,0.35)'; ctx.lineWidth = 1;
       ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + chartW, y); ctx.stroke();
       ctx.fillStyle = 'rgba(26,18,8,0.3)'; ctx.font = '9px DM Mono'; ctx.textAlign = 'right';
@@ -825,6 +828,16 @@
 
     // Episode labels
     LEAGUE.episodes.forEach((ep, i) => {
+      // Zero baseline (only shown when chart goes negative)
+      if (minVal < 0) {
+        const zeroY = PAD.top + chartH - ((0 - minVal) / valRange) * chartH;
+        ctx.beginPath(); ctx.strokeStyle = 'rgba(200,191,168,0.8)'; ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.moveTo(PAD.left, zeroY); ctx.lineTo(PAD.left + chartW, zeroY); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(26,18,8,0.3)'; ctx.font = '9px DM Mono'; ctx.textAlign = 'right';
+        ctx.fillText('0', PAD.left - 6, zeroY + 3);
+      }
       ctx.fillStyle = 'rgba(26,18,8,0.3)'; ctx.font = '9px DM Mono'; ctx.textAlign = 'center';
       ctx.fillText('Ep ' + ep.number, PAD.left + i * xStep, H - 8);
     });
@@ -839,7 +852,7 @@
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       vals.forEach((v, i) => {
         const x = PAD.left + i * xStep;
-        const y = PAD.top + chartH - (v / maxVal) * chartH;
+        const y = PAD.top + chartH - ((v - minVal) / valRange) * chartH;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       });
       ctx.stroke();
@@ -847,7 +860,7 @@
       // Dots + value labels
       vals.forEach((v, i) => {
         const x = PAD.left + i * xStep;
-        const y = PAD.top + chartH - (v / maxVal) * chartH;
+        const y = PAD.top + chartH - ((v - minVal) / valRange) * chartH;
         ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
         ctx.fillStyle = color; ctx.fill();
         ctx.strokeStyle = '#F5F0E8'; ctx.lineWidth = 1.5; ctx.stroke();
